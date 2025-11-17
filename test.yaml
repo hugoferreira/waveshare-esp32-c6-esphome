@@ -1,0 +1,97 @@
+esphome:
+  name: esp32c6_lcd
+  friendly_name: ESP32C6 LCD Demo
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESPTOOLPY_FLASHSIZE_8MB: y
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+logger:
+
+api:
+  port: 6053
+  reboot_timeout: 15min
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+spi:
+  clk_pin: GPIO7
+  mosi_pin: GPIO6
+
+# --- Backlight: BL is on GPIO22 via transistor on this board ---
+output:
+  - platform: ledc
+    pin: GPIO22          # LCD_BL
+    id: lcd_bl
+
+light:
+  - platform: monochromatic
+    id: lcd_backlight
+    name: "LCD Backlight"
+    output: lcd_bl
+    restore_mode: ALWAYS_ON   # turn BL on at boot
+
+  - platform: esp32_rmt_led_strip
+    id: status_led
+    name: "Onboard RGB LED"
+    pin: GPIO8
+    num_leds: 1
+    chipset: ws2812
+    rgb_order: RGB
+    gamma_correct: 2.8
+    default_transition_length: 0.2s
+
+# --- Display: MIPI SPI driver, ST7789V chip ---
+display:
+  - platform: mipi_spi
+    id: main_display
+    model: ST7789V
+
+    # Geometry for Waveshare 1.47" 172x320 panel:
+    # Panel is 172x320 inside a 320x320 ST7789 address space, shifted 34 pixels
+    dimensions:
+      width: 172
+      height: 320
+      offset_width: 34
+      offset_height: 0
+
+    cs_pin: GPIO14         # LCD_CS
+    dc_pin: GPIO15         # LCD_DC
+    reset_pin: GPIO21      # LCD_RST
+
+    spi_mode: MODE3        # this board wants mode 3
+    data_rate: 5MHz        # conservative; you can try 10MHz later
+    color_order: bgr       # typical for ST7789; flip to rgb if colors are wrong
+    color_depth: 16        # RGB565
+
+    # LVGL *must* own the drawing. No lambda here.
+    auto_clear_enabled: false
+    update_interval: never
+
+# --- LVGL: owns the framebuffer and draws a simple "Hello LVGL" label ---
+lvgl:
+  # On non-PSRAM boards, the docs recommend a reduced buffer size. 
+  buffer_size: 25%        # ~27kB for 172x320@RGB565 – fine for ESP32-C6
+  color_depth: 16         # must match display
+
+  # Not strictly required with a single display, but explicit is nice:
+  displays:
+    - main_display
+
+  pages:
+    - id: main_page
+      widgets:
+        - label:
+            align: CENTER
+            text: "Hello LVGL"
