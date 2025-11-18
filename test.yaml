@@ -74,24 +74,13 @@ display:
     data_rate: 5MHz        # conservative; you can try 10MHz later
     color_order: bgr       # typical for ST7789; flip to rgb if colors are wrong
     color_depth: 16        # RGB565
+    invert_colors: true
 
     # LVGL *must* own the drawing. No lambda here.
     auto_clear_enabled: false
     update_interval: never
 
-# --- LVGL: owns the framebuffer and draws a simple "Hello LVGL" label ---
 lvgl:
   # On non-PSRAM boards, the docs recommend a reduced buffer size. 
   buffer_size: 25%        # ~27kB for 172x320@RGB565 – fine for ESP32-C6
-  color_depth: 16         # must match display
-
-  # Not strictly required with a single display, but explicit is nice:
-  displays:
-    - main_display
-
-  pages:
-    - id: main_page
-      widgets:
-        - label:
-            align: CENTER
-            text: "Hello LVGL"
+  color_depth: 16  
